@@ -94,38 +94,18 @@
 
 ;; parameters
 
-(defparameter *l-shape*
-  (make-piece
-    0 1 0 0
-    0 1 0 0
-    0 1 1 0
-    0 0 0 0))
-
-(defparameter *p-shape*
-  (make-piece
-    0 0 1 0
-    0 0 1 0
-    0 1 1 0
-    0 0 0 0))
-
-(defparameter *z-shape*
-  (make-piece
-    0 0 1 0
-    0 1 1 0
-    0 1 0 0
-    0 0 0 0))
-
-(defparameter *s-shape*
-  (make-piece
-    0 1 0 0
-    0 1 1 0
-    0 0 1 0
-    0 0 0 0))
-
 (defparameter *tetraminos*
   (list
-    (get-four-rotations *l-shape*)
-    (get-four-rotations *p-shape*)
+    (get-four-rotations (make-piece
+                          0 1 0 0
+                          0 1 0 0
+                          0 1 1 0
+                          0 0 0 0))
+    (get-four-rotations (make-piece
+                          0 0 1 0
+                          0 0 1 0
+                          0 1 1 0
+                          0 0 0 0))
     (list
       (make-piece
         0 0 0 0
