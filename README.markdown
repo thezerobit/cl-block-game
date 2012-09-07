@@ -1,6 +1,7 @@
 # Cl-Block-Game
 
-A mostly-functional falling block game in Common Lisp.
+A mostly-functional falling block game in Common Lisp. See it in action
+on [youtube](http://www.youtube.com/watch?v=mY6tuSI-sgk).
 
 ## Usage
 
