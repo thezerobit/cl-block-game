@@ -25,8 +25,6 @@ In game folder, start lisp repl:
 ## TODO:
 
 * functional random number generator
-* On-screen instructions
-* more functional (fix GRID-COMBINE)
 
 ## Author
 

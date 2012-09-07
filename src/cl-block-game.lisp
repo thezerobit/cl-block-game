@@ -47,27 +47,19 @@
 (defun grid-ref (grid x y)
   (@ (@ grid :v) (+ x (* y (@ grid :width)))))
 
-(defun do-grid (grid fn &rest moar)
-  (let ((v (@ grid :v))
-        (width (@ grid :width)))
-    (dotimes (y (@ grid :height))
-      (dotimes (x width)
-        (apply fn (@ v (+ x (* y width)))
-               x y moar)))))
-
-(defun do-grid-fun-aux (grid val fn x y width &rest extra)
+(defun do-grid-fun-aux (grid val fn x y width)
   (declare (optimize (debug 3)))
    (let ((v (@ grid :v)))
      (if (>= y (@ grid :height))
        val
        (if (>= x width)
-         (apply #'do-grid-fun-aux grid val fn 0 (1+ y) width extra)
-         (apply #'do-grid-fun-aux grid
-                (apply fn val (@ v (+ x (* y width))) x y extra)
-                fn (1+ x) y width extra)))))
+         (do-grid-fun-aux grid val fn 0 (1+ y) width)
+         (do-grid-fun-aux grid
+                (funcall fn val (@ v (+ x (* y width))) x y)
+                fn (1+ x) y width)))))
 
-(defun do-grid-fun (grid val fn &rest extra)
-  (apply #'do-grid-fun-aux grid val fn 0 0 (@ grid :width) extra))
+(defun do-grid-fun (grid val fn)
+  (do-grid-fun-aux grid val fn 0 0 (@ grid :width)))
 
 (defun make-piece (&rest body)
   (make-grid 4 4 (convert 'seq body)))
@@ -86,13 +78,14 @@
 (defun rotate-right (grid)
   (let* ((w (@ grid :width))
          (h (@ grid :height))
-         (new-array (make-array (* w h) :initial-element 0)))
-    (do-grid grid
-      (lambda (val x y)
-        (let ((new-x (- w y 1))
-              (new-y x))
-          (setf (aref new-array (+ new-x (* w new-y))) val))))
-    (make-grid w h (convert 'seq new-array))))
+         (new-seq #[ ]))
+    (make-grid w h 
+               (do-grid-fun grid new-seq
+                            (lambda (new-seq val x y)
+                              (let ((new-x (- w y 1))
+                                    (new-y x))
+                                (with new-seq (+ new-x (* w new-y)) 
+                                      val)))))))
 
 (defun get-four-rotations (shape)
   (let* ((r1 (rotate-right shape))
@@ -206,8 +199,9 @@
                 :color sdl:*blue*))
 
 (defun draw-grid (grid offset-x offset-y width height)
-  (do-grid grid
-    (lambda (val x y)
+  (do-grid-fun grid nil
+    (lambda (none val x y)
+      (declare (ignore none))
       (let ((x1 (+ offset-x (* x width)))
             (y1 (+ offset-y (* y height)))
             (x2 (- (+ offset-x (* (+ 1 x) width)) 1))
@@ -238,24 +232,33 @@
                  (+ offset-x (* width (@ fb :x)))
                  (+ offset-y (* height (@ fb :y)))
                  width height)))
-  (draw-string (format nil "Game Mode: ~a" *game-mode*) 120 20))
+  (draw-string (format nil "Game Mode: ~a" *game-mode*) 120 10)
+  (draw-string "Keys:" 120 30)
+  (draw-string "r : reverse time" 120 40)
+  (draw-string "p : pause time" 120 50)
+  (draw-string "f : forward time" 120 60)
+
+  (draw-string "up arrow : rotate block" 120 80)
+  (draw-string "other arrows : move block" 120 90)
+  (draw-string "space : drop block" 120 100) )
 
 (defun drop-counter-reset (game)
   (with game :drop-counter 30))
 
 (defun legal-block-position (game fb)
   (let* ((main-grid (@ game :main-grid)))
-    (do-grid (falling-block-grid fb)
-             (lambda (elem x y)
-               (let ((x (+ x (@ fb :x)))
-                     (y (+ y (@ fb :y))))
-                 (when (and (/= elem 0)
-                         (or (< x 0)
-                             (< y 0)
-                             (>= x (@ main-grid :width))
-                             (>= y (@ main-grid :height))
-                             (/= (grid-ref main-grid x y) 0)))
-                   (return-from legal-block-position nil)))))
+    (do-grid-fun (falling-block-grid fb) nil
+                 (lambda (none elem x y)
+                   (declare (ignore none))
+                   (let ((x (+ x (@ fb :x)))
+                         (y (+ y (@ fb :y))))
+                     (when (and (/= elem 0)
+                             (or (< x 0)
+                                 (< y 0)
+                                 (>= x (@ main-grid :width))
+                                 (>= y (@ main-grid :height))
+                                 (/= (grid-ref main-grid x y) 0)))
+                       (return-from legal-block-position nil)))))
     T))
 
 ;; main is a grid hash, other is a grid hash
