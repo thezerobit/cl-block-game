@@ -48,7 +48,6 @@
   (@ (@ grid :v) (+ x (* y (@ grid :width)))))
 
 (defun do-grid-fun-aux (grid val fn x y width)
-  (declare (optimize (debug 3)))
    (let ((v (@ grid :v)))
      (if (>= y (@ grid :height))
        val
@@ -263,7 +262,6 @@
 
 ;; main is a grid hash, other is a grid hash
 (defun grid-combine-fun (main other offset-x offset-y)
-  (declare (optimize (debug 3)))
   (let ((w (@ main :width))
         (h (@ main :height)))
     (with main :v
@@ -281,7 +279,6 @@
 
 ;; executes against game when drop-counter hits zero
 (defun drop-block-one (game)
-  (declare (optimize (debug 3)))
   (let* ((fb (@ game :fb))
          (dropped-fb (with fb :y (1+ (@ fb :y)))))
     (if (legal-block-position game dropped-fb)
