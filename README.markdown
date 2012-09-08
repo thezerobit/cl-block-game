@@ -25,6 +25,9 @@ In game folder, start lisp repl:
 
 ## TODO:
 
+* Score
+* Levels
+* Game-Over
 * functional random number generator
 
 ## Author
