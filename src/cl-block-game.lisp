@@ -35,6 +35,17 @@
         (list form x)))
     x))
 
+;; random number generator that creates a closure which will act like the
+;; builtin RANDOM function when funcalled with an argument, but it will
+;; also return another generator that will produce the next value in the
+;; series
+(defun make-functional-rng (&optional random-state)
+  (let ((rand-state (or random-state (make-random-state T))))
+    (lambda (arg)
+      (let ((copied-state (make-random-state rand-state)))
+        (values (random arg copied-state)
+                (make-functional-rng copied-state))))))
+
 (defgeneric make-grid (w h init))
 
 (defmethod make-grid (w h (init seq))
@@ -63,8 +74,22 @@
 (defun make-piece (&rest body)
   (make-grid 4 4 (convert 'seq body)))
 
-(defun make-falling-block (&key (x 0) (y 0) (tetramino (random-piece)))
-  #{| (:x x) (:y y) (:tetramino tetramino) (:position 0) |})
+;; function that takes a game hash, and a number and returns the
+;; game hash with updated random number generator and the generated
+;; random number
+(defun game-random (game arg)
+  (multiple-value-bind (result new-rng) (funcall (@ game :rng) arg)
+    (values (with game :rng new-rng) result)))
+
+(defun random-piece (game)
+  (multiple-value-bind (game random-value)
+    (game-random game *count-tetraminos*)
+    (values game (nth random-value *tetraminos*))))
+
+(defun make-falling-block (game &key (x 0) (y 0))
+  (multiple-value-bind (updated-game tetramino) (random-piece game)
+    (values updated-game
+            #{| (:x x) (:y y) (:tetramino tetramino) (:position 0) |})))
 
 (defun falling-block-grid (falling-block)
   (nth (@ falling-block :position) (@ falling-block :tetramino)))
@@ -190,9 +215,6 @@
           (sdl:draw-box (sdl:rectangle-from-edges-* x1 y1 x2 y2)
             :color color))))))
 
-(defun random-piece ()
-  (nth (random *count-tetraminos*) *tetraminos*))
-
 (defun make-game ()
   #{| (:main-grid (make-grid 10 20 0))
       (:fb nil)
@@ -200,7 +222,8 @@
       (:drop-counter 0)
       (:active T)
       (:level 1)
-      (:keys-down (fset:map)) |})
+      (:keys-down (fset:map))
+      (:rng (make-functional-rng)) |})
 
 (defun draw-game (game offset-x offset-y width height)
   (draw-backdrop (@ game :main-grid) offset-x offset-y width height)
@@ -361,9 +384,11 @@
 
 (defun create-piece-if-none (game)
   (if (null (@ game :fb))
-    (-> game
-        (with :fb (make-falling-block :x 3 :y 0))
-        drop-counter-reset)
+    (multiple-value-bind
+      (updated-game new-fb) (make-falling-block game :x 3 :y 0)
+      (-> updated-game
+          (with :fb new-fb)
+          drop-counter-reset))
     game))
 
 (defun drop-if-time (game)
