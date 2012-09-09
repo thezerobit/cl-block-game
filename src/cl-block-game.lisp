@@ -12,15 +12,20 @@
     #:@
     #:with
     #:with-last
+    #:with-first
     #:less
     #:*fset-readtable*
     #:gmap
     #:with-default
     #:contains?
-    )
+    #:subseq
+    #:size
+    #:filter
+    #:concat)
   (:shadowing-import-from :fset
     #:set-difference
-    #:intersection))
+    #:intersection
+    #:reduce))
 (in-package :cl-block-game)
 
 (eval-when (:compile-toplevel :load-toplevel :execute) 
@@ -334,33 +339,33 @@
     (:drop (drop-block game))
     (otherwise game)))
 
+(defun partition (seq n &key (result (fset:seq)))
+  (if (= 0 (size seq))
+    result
+    (partition (subseq seq n) n :result (with-last result (subseq seq 0 n)))))
+
+(defun row-full (seq)
+  (every (lambda (x) (/= x 0)) (convert 'list seq)))
+
+(defun add-empty-rows (rows n width)
+  (if (> n 0)
+    (add-empty-rows
+      (with-first rows
+                  (convert 'seq (loop for i upto (1- width) collecting 0)))
+      (1- n) width)
+    rows))
+
 (defun clear-lines (game)
   (let* ((main-grid (@ game :main-grid))
-         (vec (@ main-grid :v))
-         (w (@ main-grid :width))
-         (cleared-lines nil)
-         (new-vec #[ ]))
-    (dotimes (row (@ main-grid :height))
-      (when (block check-row
-              (dotimes (col w)
-                (if (= 0 (@ vec (+ col (* row w))))
-                  (return-from check-row nil)))
-              T)
-        (push row cleared-lines)))
-    (if cleared-lines
-      (progn
-        (dotimes (row (@ main-grid :height))
-          (let ((row-offset (count-if (lambda (clrd) (>= clrd row)) cleared-lines)))
-            (dotimes (col w)
-              (if (> row-offset row)
-                (setf new-vec (with-last new-vec 0))
-                (let* ((from-row (- row row-offset))
-                       (val (@ vec (+ col (* from-row w)))))
-                  (setf new-vec (with-last new-vec val)))))))
-        (-> game
-          (with :main-grid (with main-grid :v new-vec))
-          (change-key :cleared-lines (lambda (x) (+ x (length cleared-lines))))))
-      game)))
+         (width (@ main-grid :width))
+         (rows (partition (@ main-grid :v) width))
+         (filtered-rows (filter (complement #'row-full) rows))
+         (cleared-lines (- (@ main-grid :height) (size filtered-rows)))
+         (all-rows (add-empty-rows filtered-rows cleared-lines width))
+         (new-vec (reduce #'concat all-rows)))
+    (-> game
+        (with :main-grid (with main-grid :v new-vec))
+        (change-key :cleared-lines (lambda (x) (+ x cleared-lines))))))
 
 (defun inc-level (game)
   (with game :level (1+ (truncate (@ game :cleared-lines) 10))))

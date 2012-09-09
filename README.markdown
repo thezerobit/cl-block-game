@@ -25,7 +25,7 @@ In game folder, start lisp repl:
 
 ## TODO:
 
-* Bug: sometimes too many lines are cleared?
+* Level speed-up
 * Score
 * Game-Over
 
