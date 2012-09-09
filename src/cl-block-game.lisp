@@ -221,6 +221,7 @@
       (:frame-counter 0)
       (:drop-counter 0)
       (:active T)
+      (:cleared-lines 0)
       (:level 1)
       (:keys-down (fset:map))
       (:rng (make-functional-rng)) |})
@@ -242,7 +243,9 @@
 
   (draw-string "up arrow : rotate block" 120 80)
   (draw-string "other arrows : move block" 120 90)
-  (draw-string "space : drop block" 120 100) )
+  (draw-string "space : drop block" 120 100)
+
+  (draw-string (format nil "LEVEL: ~a" (@ game :level)) 30 1))
 
 (defun drop-counter-reset (game)
   (with game :drop-counter 30))
@@ -354,8 +357,13 @@
                 (let* ((from-row (- row row-offset))
                        (val (@ vec (+ col (* from-row w)))))
                   (setf new-vec (with-last new-vec val)))))))
-        (with game :main-grid (with main-grid :v new-vec)))
+        (-> game
+          (with :main-grid (with main-grid :v new-vec))
+          (change-key :cleared-lines (lambda (x) (+ x (length cleared-lines))))))
       game)))
+
+(defun inc-level (game)
+  (with game :level (1+ (truncate (@ game :cleared-lines) 10))))
 
 (defun update-keys-down (game incoming-keys-down)
   (with game :keys-down
@@ -409,6 +417,7 @@
         (update-keys-down keys-down)
         do-actions
         clear-lines
+        inc-level
         create-piece-if-none
         drop-if-time
         (change-key :drop-counter #'1-)
