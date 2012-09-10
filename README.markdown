@@ -27,7 +27,6 @@ In game folder, start lisp repl:
 
 * Level speed-up
 * Score
-* Game-Over
 
 ## Author
 

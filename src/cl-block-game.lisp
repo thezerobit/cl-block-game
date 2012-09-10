@@ -18,13 +18,13 @@
     #:gmap
     #:with-default
     #:contains?
-    #:subseq
     #:size
     #:filter
     #:concat)
   (:shadowing-import-from :fset
     #:set-difference
     #:intersection
+    #:subseq
     #:reduce))
 (in-package :cl-block-game)
 
@@ -78,23 +78,6 @@
 
 (defun make-piece (&rest body)
   (make-grid 4 4 (convert 'seq body)))
-
-;; function that takes a game hash, and a number and returns the
-;; game hash with updated random number generator and the generated
-;; random number
-(defun game-random (game arg)
-  (multiple-value-bind (result new-rng) (funcall (@ game :rng) arg)
-    (values (with game :rng new-rng) result)))
-
-(defun random-piece (game)
-  (multiple-value-bind (game random-value)
-    (game-random game *count-tetraminos*)
-    (values game (nth random-value *tetraminos*))))
-
-(defun make-falling-block (game &key (x 0) (y 0))
-  (multiple-value-bind (updated-game tetramino) (random-piece game)
-    (values updated-game
-            #{| (:x x) (:y y) (:tetramino tetramino) (:position 0) |})))
 
 (defun falling-block-grid (falling-block)
   (nth (@ falling-block :position) (@ falling-block :tetramino)))
@@ -196,6 +179,23 @@
       (:sdl-key-c     :r-left)
       (:sdl-key-v     :r-right) |} )
 
+;; function that takes a game hash, and a number and returns the
+;; game hash with updated random number generator and the generated
+;; random number
+(defun game-random (game arg)
+  (multiple-value-bind (result new-rng) (funcall (@ game :rng) arg)
+    (values (with game :rng new-rng) result)))
+
+(defun random-piece (game)
+  (multiple-value-bind (game random-value)
+    (game-random game *count-tetraminos*)
+    (values game (nth random-value *tetraminos*))))
+
+(defun make-falling-block (game &key (x 0) (y 0))
+  (multiple-value-bind (updated-game tetramino) (random-piece game)
+    (values updated-game
+            #{| (:x x) (:y y) (:tetramino tetramino) (:position 0) |})))
+
 
 (defun draw-string (string x y &key (color sdl:*white*) (bg sdl:*black*))
   (sdl:draw-string-shaded-* string x y color bg))
@@ -225,7 +225,7 @@
       (:fb nil)
       (:frame-counter 0)
       (:drop-counter 0)
-      (:active T)
+      (:state :active)
       (:cleared-lines 0)
       (:level 1)
       (:keys-down (fset:map))
@@ -250,7 +250,10 @@
   (draw-string "other arrows : move block" 120 90)
   (draw-string "space : drop block" 120 100)
 
-  (draw-string (format nil "LEVEL: ~a" (@ game :level)) 30 1))
+  (draw-string (format nil "LEVEL: ~a" (@ game :level)) 30 1)
+
+  (when (eq :game-over (@ game :state))
+    (draw-string "GAME OVER" 30 60)))
 
 (defun drop-counter-reset (game)
   (with game :drop-counter 30))
@@ -411,13 +414,19 @@
         drop-counter-reset)
     game))
 
+(defun game-end-check (game)
+  (if (and (@ game :fb)
+           (not (legal-block-position game (@ game :fb))))
+    (with game :state :game-over)
+    game))
+
 (defun change-key (game key fn &rest extra)
   (with game key (apply fn (@ game key) extra)))
 
 ;; a pure function, takes a game hash and a set of keys pressed
 ;; returns an updated game hash
 (defun step-game (game keys-down)
-  (if (@ game :active)
+  (if (eq :active (@ game :state))
     (-> game
         (update-keys-down keys-down)
         do-actions
@@ -426,7 +435,8 @@
         create-piece-if-none
         drop-if-time
         (change-key :drop-counter #'1-)
-        (change-key :frame-counter #'1+))
+        (change-key :frame-counter #'1+)
+        game-end-check)
     game))
 
 (defmethod contains? ((m fset:map) x)
@@ -466,7 +476,7 @@
           ;; step game forward
           (cond
             ((eq *game-mode* :playing)
-             (progn
+             (when (eq (@ game :state) :active)
                (push game reverse-history)
                (setf game (step-game game keys-down))
                ))
