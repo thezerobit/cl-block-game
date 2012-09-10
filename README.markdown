@@ -25,7 +25,6 @@ In game folder, start lisp repl:
 
 ## TODO:
 
-* New Game
 * Next Piece
 
 ## Author
