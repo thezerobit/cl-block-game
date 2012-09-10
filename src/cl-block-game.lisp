@@ -228,6 +228,7 @@
       (:state :active)
       (:cleared-lines 0)
       (:level 0)
+      (:points 0)
       (:keys-down (fset:map))
       (:rng (make-functional-rng)) |})
 
@@ -250,7 +251,8 @@
   (draw-string "other arrows : move block" 120 90)
   (draw-string "space : drop block" 120 100)
 
-  (draw-string (format nil "LEVEL: ~a" (@ game :level)) 30 1)
+  (draw-string (format nil "LEVEL: ~a" (@ game :level)) 10 1)
+  (draw-string (format nil "SCORE: ~a" (@ game :points)) 10 211)
 
   (when (eq :game-over (@ game :state))
     (draw-string "GAME OVER" 30 60)))
@@ -358,6 +360,16 @@
       (1- n) width)
     rows))
 
+(defparameter *base-points*
+  (with-default #{| (0 0) (1 40) (2 100) (3 300) (4 1200) |} 0))
+
+(defun apply-points (game cleared-lines)
+  (change-key game :points
+              (lambda (points)
+                (+ points
+                   (* (1+ (@ game :level))
+                      (@ *base-points* cleared-lines))))))
+
 (defun clear-lines (game)
   (let* ((main-grid (@ game :main-grid))
          (width (@ main-grid :width))
@@ -368,7 +380,9 @@
          (new-vec (reduce #'concat all-rows)))
     (-> game
         (with :main-grid (with main-grid :v new-vec))
-        (change-key :cleared-lines (lambda (x) (+ x cleared-lines))))))
+        (change-key :cleared-lines (lambda (x) (+ x cleared-lines)))
+        (apply-points cleared-lines)
+        )))
 
 (defun inc-level (game)
   (with game :level (truncate (@ game :cleared-lines) 10)))
