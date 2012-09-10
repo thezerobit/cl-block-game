@@ -25,8 +25,8 @@ In game folder, start lisp repl:
 
 ## TODO:
 
-* Level speed-up
 * Score
+* Next Piece
 
 ## Author
 
