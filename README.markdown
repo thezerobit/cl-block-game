@@ -2,6 +2,8 @@
 
 A mostly-functional falling block game in Common Lisp. See it in action
 on [youtube](http://www.youtube.com/watch?v=mY6tuSI-sgk).
+Download Windows build (made with Clozure Common Lisp)
+[here](https://thezerobit.com/ccl_win32_build.zip).
 
 ## Usage
 
