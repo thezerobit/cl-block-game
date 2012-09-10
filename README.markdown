@@ -20,6 +20,7 @@ In game folder, start lisp repl:
 * 'r' reverses game time
 * 'p' pauses game (use 'f' to go forward again)
 * 'f' game moves forward through time
+* 'n' starts a brand new game
 
 ## Installation
 
