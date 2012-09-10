@@ -227,7 +227,7 @@
       (:drop-counter 0)
       (:state :active)
       (:cleared-lines 0)
-      (:level 1)
+      (:level 0)
       (:keys-down (fset:map))
       (:rng (make-functional-rng)) |})
 
@@ -256,7 +256,7 @@
     (draw-string "GAME OVER" 30 60)))
 
 (defun drop-counter-reset (game)
-  (with game :drop-counter 30))
+  (with game :drop-counter (max 6 (- 30 (* 2 (@ game :level))))))
 
 (defun legal-block-position (game fb)
   (let* ((main-grid (@ game :main-grid)))
@@ -371,7 +371,7 @@
         (change-key :cleared-lines (lambda (x) (+ x cleared-lines))))))
 
 (defun inc-level (game)
-  (with game :level (1+ (truncate (@ game :cleared-lines) 10))))
+  (with game :level (truncate (@ game :cleared-lines) 10)))
 
 (defun update-keys-down (game incoming-keys-down)
   (with game :keys-down
